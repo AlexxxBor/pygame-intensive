@@ -1,7 +1,11 @@
 import pygame, sys
 
 pygame.init()
-screen = pygame.display.set_mode((576, 1024))
+screen = pygame.display.set_mode((450, 800))
+clock = pygame.time.Clock()
+
+bg_surface = pygame.image.load('sprites/background-day.png').convert()  # добавляем преобразование изображения
+bg_surface = pygame.transform.scale(bg_surface, (450, 800))  # Делаем фоновое изображение по размеру экрана
 
 while True:
     for event in pygame.event.get():
@@ -9,4 +13,7 @@ while True:
             pygame.quit()
             sys.exit()
 
-    pygame.display.update()  # Выводит на экран всё, что было нарисовано в цикле
+    screen.blit(bg_surface, (0, 0))
+
+    pygame.display.update()
+    clock.tick(120)
