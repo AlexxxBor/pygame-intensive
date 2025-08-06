@@ -244,3 +244,48 @@ while True:
     pygame.display.update()
     clock.tick(120)
 ```
+## Часть 4. Создание анимации
+В оригинальной игре Flappy Bird есть земля (пол), которая постоянно движется справа-налево.
+В этой части будем создавать такую землю и сделаем так, чтобы она постоянно двигалась.
+
+Для начала импортируем изображение земли и преобразуем его. Преобразование нужно, чтобы
+ширина изображения стала соответствовать ширине экрана, в котором отображается игра.
+
+Для этого в методе **pygame.transform.scale()** для изображения землы мы просто указываем такую же ширину
+как и у холста (**screen = pygame.display.set_mode((450, 800))**), а высоту либо вычисляем по формуле
+
+x = [(wn : w) * h], где
+
+      x - искомая высота
+      wn - новая ширина масштабируемого изображения (в нашем случае равна 450 пикселей)
+      w - исходная ширина масштабируемого изображения (ширина исходного изобажения 336 пикселей)
+      h - исходная высота масштабируемого изображения (высота исходного изобажения 112 пикселей)
+      [] - означают, что берется целая часть результата, а дробная отбрасывается
+
+либо пользуемся калькулятором соотношения сторон, который можно найти в интернете.
+
+```Python
+import pygame, sys
+
+pygame.init()
+screen = pygame.display.set_mode((450, 800))
+clock = pygame.time.Clock()
+
+bg_surface = pygame.image.load('sprites/background-day.png').convert()
+bg_surface = pygame.transform.scale(bg_surface, (450, 800))
+
+floor_surface = pygame.image.load('sprites/base.png').convert()  # импорт изображения земли
+floor_surface = pygame.transform.scale(floor_surface,(450, 150))  # подгоняем ширину под холст (и высоту)
+
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+    screen.blit(bg_surface, (0, 0))
+    screen.blit(floor_surface, (0, 650))  # Отобразим землю в нужном месте холста
+
+    pygame.display.update()
+    clock.tick(120)
+```
