@@ -25,9 +25,9 @@
 
 Питон сам по себе не умеет рисовать изображения и показывать их нам
 (в базе доступен только print и вывод в консоль).
-Так же в базе питон не умеет получать ввод от пользователя без приостановке программы (ввод "на лету"),
-который нужен для быстрого реагирования на действия пользователя (есть только input, 
-который приостанавливает выполнение программы до ввода данных пользователем).
+Так же в базе питон не умеет получать ввод от пользователя без приостановки программы (ввод "на лету"),
+который нужен для быстрого реагирования на действия пользователя - есть только input, 
+который приостанавливает выполнение программы до ввода данных пользователем.
 
 Поэтому нам нужна одина из библиотек, расширяющих возможнсть языка, например Pygame, Pyglet или Arcade.
 
@@ -245,13 +245,17 @@ while True:
     clock.tick(120)
 ```
 ## Часть 4. Создание анимации
+### 4.1. Двигаем землю
+
+> <p align=right>«Дайте мне точку опоры, и я переверну Землю»<br> Архимед</p>
+
 В оригинальной игре Flappy Bird есть земля (пол), которая постоянно движется справа-налево.
 В этой части будем создавать такую землю и сделаем так, чтобы она постоянно двигалась.
 
 Для начала импортируем изображение земли и преобразуем его. Преобразование нужно, чтобы
 ширина изображения стала соответствовать ширине экрана, в котором отображается игра.
 
-Для этого в методе **pygame.transform.scale()** для изображения землы мы просто указываем такую же ширину
+Для этого в методе **pygame.transform.scale()** для изображения землы мы просто указываем такую же ширину,
 как и у холста (**screen = pygame.display.set_mode((450, 800))**), а высоту либо вычисляем по формуле
 
 x = [(wn : w) * h], где
@@ -262,7 +266,7 @@ x = [(wn : w) * h], где
       h - исходная высота масштабируемого изображения (высота исходного изобажения 112 пикселей)
       [] - означают, что берется целая часть результата, а дробная отбрасывается
 
-либо пользуемся калькулятором соотношения сторон, который можно найти в интернете.
+либо воспользуемся калькулятором соотношения сторон, который можно найти в интернете.
 
 ```Python
 import pygame, sys
@@ -289,3 +293,360 @@ while True:
     pygame.display.update()
     clock.tick(120)
 ```
+Чтобы отобразить картинку земли в нужном месте экрана, её необходимо опустить по оси y на величину,
+равную разности высоты экрана (screen) и высоты изображения земли (floor_surface): 800 - 150 = 650.
+### Немного практики
+Добавим земле движение. Для этого необходимо сделать так, чтобы каждый следующий кадр картинка земли немного сдвигалась
+по горизонтали относительно своей позиции на предыдущем кадре. Для этого заменим значение, определяющее положение картинки
+по оси X на перменную **floor_x_pos** и создадим эту переменную. Теперь достаточно менять значение переменно **floor_x_pos** на
+некоторую величину, например на единицу (1), каждый кадр и земля придёт в движение:
+
+```Python
+import pygame, sys
+
+pygame.init()
+screen = pygame.display.set_mode((450, 800))
+clock = pygame.time.Clock()
+
+bg_surface = pygame.image.load('sprites/background-day.png').convert()
+bg_surface = pygame.transform.scale(bg_surface, (450, 800))
+
+floor_surface = pygame.image.load('sprites/base.png').convert()
+floor_surface = pygame.transform.scale(floor_surface,(450, 150))
+
+floor_x_pos = 0  # Переменная для хранения положения по оси х
+
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+    screen.blit(bg_surface, (0, 0))
+    screen.blit(floor_surface, (floor_x_pos, 650))  # меняем число на переменную
+    floor_x_pos += 1  # Сдвигаем изображение по оси х на 1 пиксель каждый кадр
+
+    pygame.display.update()
+    clock.tick(120)
+```
+___
+#### Эксперимент
+1. Поменяйте оператор **+=** в строке **floor_x_pos += 1** на оператор **-=**.\
+Что произошло с землёй? Почему?
+2. Измените значение FPS в строке **clock.tick(120)** со 120 на 1, а значение перемнной
+**floor_x_pos** в строке **floor_x_pos -= 1** на 50 или 100 (**floor_x_pos -= 50**).\
+Как теперь стала двигаться земля? Почему?
+3. Верните значение 1 переменной floor_x_pos значение, а FPS установите обратно в 120.
+```Python
+# После эксперимента участок кода, над которым мы работали, должен выглядеть так:
+...
+screen.blit(floor_surface, (floor_x_pos, 650))
+    floor_x_pos -= 1  # Тут 1
+
+    pygame.display.update()
+    clock.tick(120)  # Тут 120
+```
+___
+Проблема в том, что земля "уходит из-под ног": изорбажение сдвигается справа налево (после замены += 1 на -= 1) и через
+некоторое количество кадров исчезает с экрана.
+
+Чтобы решить эту проблему, необходимо добавить втрое изображение земли,
+которое будет смещено вправо на ширину экрана и изначально будет выходить за его пределы.
+Кроме того, первое изображение, которое изначально видно на экране, после выхода за передлы экрана влево необходимо будет возвращать
+обратно в изначальное положение, а второе - снова сдвигать вправо за пределы экрана.
+
+Таким образом мы сделаем "поезд" из двух изображений, которые будут менять друг-друга при 
+движении.
+**Тут добаить картинки, иллюстрирующие происходящее**
+
+```Python
+import pygame, sys
+
+pygame.init()
+screen = pygame.display.set_mode((450, 800))
+clock = pygame.time.Clock()
+
+bg_surface = pygame.image.load('sprites/background-day.png').convert()
+bg_surface = pygame.transform.scale(bg_surface, (450, 800))
+
+floor_surface = pygame.image.load('sprites/base.png').convert()
+floor_surface = pygame.transform.scale(floor_surface,(450, 150))
+
+floor_x_pos = 0  # Переменная для хранения положения по оси х
+
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+    screen.blit(bg_surface, (0, 0))
+    screen.blit(floor_surface, (floor_x_pos, 650))  # Тут рисуем видимую на экране часть земли
+    screen.blit(floor_surface, (floor_x_pos + 450, 650))  # А тут - часть земли, сдвинутую вправо за грацины экрана
+                                                          # по оси х на значение, равное ширине экрана (450)
+    floor_x_pos -= 1
+    
+    if floor_x_pos <= -450:  # Если видимое изображение вышло за грницы экрана влево (x = -450), 
+        floor_x_pos = 0  # возвращаем его обратно (x = 0)
+
+    pygame.display.update()
+    clock.tick(120)
+
+```
+Чтобы код основной программы не разрастался, вынесем действия, создающие иллюзию движения земли, в отдельную функцию **draw_floor()**, 
+которую будем вызывать из основного кода:
+
+```Python
+import pygame, sys
+
+
+def draw_floor():  # Создаём функцию отображения двух изображений земли
+    screen.blit(floor_surface, (floor_x_pos, 650))
+    screen.blit(floor_surface, (floor_x_pos + 450, 650))
+
+
+pygame.init()
+screen = pygame.display.set_mode((450, 800))
+clock = pygame.time.Clock()
+
+bg_surface = pygame.image.load('sprites/background-day.png').convert()
+bg_surface = pygame.transform.scale(bg_surface, (450, 800))
+
+floor_surface = pygame.image.load('sprites/base.png').convert()
+floor_surface = pygame.transform.scale(floor_surface,(450, 150))
+
+floor_x_pos = 0  # Переменная для хранения положения по оси х
+
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+    screen.blit(bg_surface, (0, 0))
+    draw_floor()  # Взываем функцию - рисуем землю
+    floor_x_pos -= 1  # Двигаем обе картинки справа-налево...
+    
+    if floor_x_pos <= -450:
+        floor_x_pos = 0  #...и возвращаем их обратно, когда первая картинка выйдёт
+                         # за границы экрана
+
+    pygame.display.update()
+    clock.tick(120)
+```
+
+### 4.2. Кое-что о птичках
+>― Крылья, крылья. Ноги!<br>
+>― Ноги, крылья. Главное - хвост!<br>
+> <p align=right>«Крылья, ноги и хвосты»</p>
+
+Чтобы создать птицу, необходимо проделть те жедействия, которые мы делали изоражениями фона и земли, т.е. загрузить изображение птицы,
+сконвертировать его в формат Pygame, увеличить (отмастабировать) и создать поверхность (surface).
+
+Логика поведения птицы имеет несколько нюансов, которые отличают её от других изображений:
+1. Изображения тпицы необходимо вращать относительно центра, а не верхнего левого угла.
+2. Птица должна уметь сталкиваться со столбами, пожтому нам необходимо эти столкновения отслеживать.
+3. На птицу должна действовать гравитация: тянуть её вниз.
+
+Простые поверхности (surface) не позволяют выполнить логику, описанную выше, поэтому нам понадобится
+новый объект из недр Pygame - объект **Rect** или прямоугольная поверхность.
+
+**Rect** позволяет менять центр, относительно которого перемещается изображение и отслеживать столкновения с дргуми подобными объектами.
+С помощью него можно задать следубщие точки на изображении:
+1. Точки левой границы: topleft, midleft, bottomleft
+2. Точки средней линии: midtop, center, midbottom
+3. Точки правой границы: topright, midright, bottomright
+
+Для создания объекат типа Rect, или прямоугольного объекта, можно использовать метод get_rect() повехности (surface):
+```Python
+surface.get_rect()
+```
+
+### Немного практики
+Создадим изображение птицы, преобразуем его в прямоуглоьный объект и отобразим на экране:
+```Python
+import pygame, sys
+
+
+def draw_floor():
+    screen.blit(floor_surface, (floor_x_pos, 650))
+    screen.blit(floor_surface, (floor_x_pos + 450, 650))
+
+
+pygame.init()
+screen = pygame.display.set_mode((450, 800))
+clock = pygame.time.Clock()
+
+bg_surface = pygame.image.load('sprites/background-day.png').convert()
+bg_surface = pygame.transform.scale(bg_surface, (450, 800))
+
+floor_surface = pygame.image.load('sprites/base.png').convert()
+floor_surface = pygame.transform.scale(floor_surface,(450, 150))
+floor_x_pos = 0
+
+bird_surface = pygame.image.load('sprites/bluebird-midflap.png').convert()  # Загружаем птичку
+bird_surface = pygame.transform.scale2x(bird_surface)  # Увеличиваем её в 2 раза
+bird_rect = bird_surface.get_rect(center=(100, 400))  # Размещаем центр птички в точке 100, 400.
+
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+    screen.blit(bg_surface, (0, 0))
+    screen.blit(bird_surface, bird_rect)  # отображаем прямоугольный объект птички
+
+    draw_floor()
+    floor_x_pos -= 1
+
+    if floor_x_pos <= -450:
+        floor_x_pos = 0
+
+    pygame.display.update()
+    clock.tick(120)
+```
+**_TODO:_** Расписать подробнее внесённый в код строки
+
+#### Воздействие гравитации
+У прямоугольного объекта, кроме названных выше точек, есть ещё и другие точки: left, right, top и bottom, а центральная точка 
+имеет свойства centerx и entery, которые модно использовать для движения объекта.
+
+**_TODO_**: тут картинка с обозначениями дополнительных точек.
+
+Чтобы сдвинуть прямоугольный объект птицы, воспользуемся свойством centery, которое перемещает объект
+вдоль оси y, т.е.по вертикали. Так же создадим несколько вспомогательных переменных:
+1. **gravity** - для хранения значения гравитации,
+2. **bird_movement** - для хранения значения, ~~показывающего направление движения птицы~~ (вверх или вниз).
+```Python
+import pygame, sys
+
+
+def draw_floor():
+    screen.blit(floor_surface, (floor_x_pos, 650))
+    screen.blit(floor_surface, (floor_x_pos + 450, 650))
+
+
+pygame.init()
+screen = pygame.display.set_mode((450, 800))
+clock = pygame.time.Clock()
+
+# Game variables - так отмечается раздел, отмеченный комментарием
+gravity = 0.25  # Значение гравитации - не имеет ничего общего с реальным миром, просто красивое число
+bird_movement = 0  # Переменная для управления направлением птицы (вверх или вниз)
+
+bg_surface = pygame.image.load('sprites/background-day.png').convert()
+bg_surface = pygame.transform.scale(bg_surface, (450, 800))
+
+floor_surface = pygame.image.load('sprites/base.png').convert()
+floor_surface = pygame.transform.scale(floor_surface,(450, 150))
+floor_x_pos = 0
+
+bird_surface = pygame.image.load('sprites/bluebird-midflap.png').convert()
+bird_surface = pygame.transform.scale2x(bird_surface)
+bird_rect = bird_surface.get_rect(center=(100, 400))
+
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+    screen.blit(bg_surface, (0, 0))
+
+    bird_movement += gravity  # Добавляем гравитацию на каждом кадре
+    bird_rect.centery += bird_movement  # Перемещаем прямоугольник
+
+    screen.blit(bird_surface, bird_rect)
+    draw_floor()
+    floor_x_pos -= 1
+
+    if floor_x_pos <= -450:
+        floor_x_pos = 0
+
+    pygame.display.update()
+    clock.tick(120)
+
+```
+Пока что птичка падает вниз за пределы экрана и исчезает. Поможем ей взлететь.
+
+Для этого нам понадобится обработать ввод с клавиатуры, ведь птичка должна взлетать
+только в тот момент, когда игрок нажимает клавишу. Мы будем программировать клавишу пробел.
+
+При нажатии клавиши пробел:
+1. Останавливаем падение птички, т.е. обнуляем воздействие гравитации установкой \
+значения переменной **bird_movement** в 0, т.е. убираем из переменной всю "накопившуюся" гравитацию.
+2. Подбрасываем её вверх уменьшением текущего значения координаты y на небольшое значение,
+   например так: **bird_movement -= 5**.
+
+> В системе координат Pygame движение вверх это **"-"**, а не **"+"**!
+
+Чтобы запрограммировать нажатие клавиши, допишем следующий код в цикл обработки событий:
+```Python
+if event.type == pygame.KEYDOWN:
+    if event.key == pygame.K_SPACE:
+        # ... тут код "подбрасывания" птички
+```
+Данный код можно прочитать так: если была нажата клавиша (какая-то) и если это клавиша - Пробел,
+то подбрасываем птичку вверх на небольшое количество пикселей.
+
+```Python
+import pygame, sys
+
+
+def draw_floor():
+    screen.blit(floor_surface, (floor_x_pos, 650))
+    screen.blit(floor_surface, (floor_x_pos + 450, 650))
+
+
+pygame.init()
+screen = pygame.display.set_mode((450, 800))
+clock = pygame.time.Clock()
+
+# Game variables
+gravity = 0.25
+bird_movement = 0
+
+bg_surface = pygame.image.load('sprites/background-day.png').convert()
+bg_surface = pygame.transform.scale(bg_surface, (450, 800))
+
+floor_surface = pygame.image.load('sprites/base.png').convert()
+floor_surface = pygame.transform.scale(floor_surface,(450, 150))
+floor_x_pos = 0
+
+bird_surface = pygame.image.load('sprites/bluebird-midflap.png').convert()
+bird_surface = pygame.transform.scale2x(bird_surface)
+bird_rect = bird_surface.get_rect(center=(100, 400))
+
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        if event.type == pygame.KEYDOWN:  # Нажата ли клавиша
+            if event.key == pygame.K_SPACE:  # Если нажатая клавиша - пробел
+                bird_movement = 0  # Останавливаем движение птички
+                bird_movement -= 5  # переносив её центр вверх на 5 пикселей
+
+    screen.blit(bg_surface, (0, 0))
+
+    bird_movement += gravity
+    bird_rect.centery += bird_movement
+
+    screen.blit(bird_surface, bird_rect)
+    draw_floor()
+    floor_x_pos -= 1
+
+    if floor_x_pos <= -450:
+        floor_x_pos = 0
+
+    pygame.display.update()
+    clock.tick(120)
+
+```
+
+### 4.3. Огонь, вода и медные трубы
+
+
+#### Анимация крыльев
+
