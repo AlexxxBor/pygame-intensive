@@ -645,8 +645,201 @@ while True:
 
 ```
 
-### 4.3. Огонь, вода и медные трубы
+### 4.3.0 Огонь, вода и медные трубы
+#### (Не) очень много теории.
+На данном этапе реализованы земля и птичка. Пора сделать трубы. Задача усложняется тем, что трубы должны создаваться в течение длительного времени,
+пока игрок не допускает ошибок в игре, а ещё они должны располагаться по верху и низу экрана и меть разную высоту, причём такую,
+чтобы птичка могла пролететь между зазором.
+
+Поверность (surface) трубы будем создавать привычным способом с помощью загрузки изображения и его конвертирования:
+```Python
+pipe_surface = pygame.image.load('sprites/pipe-green.png')
+pipe_surface = pygame.transform.scale2x(pipe_surface)
+```
+Настоящие трубы хранятся на складе, а мы будем хранить все трубы в списке:
+```Python
+pipe_list = []
+```
+Список позволяет перебирать его содержимое в цикле, поэтому мы сможем обратиться к каждой трубе в списке труб и сдвинуть их все в нужном направлении.
+
+Но вот вопрос: необходимо ли сразу заполнить список трубами, а потом выводить их на экран и передвигать или заполнять список постепенно, доьавляя в него
+каждую новую трубу по мере её появления на экране?
+
+В первом случае мы должны быть уверены в том, что тех труб, которые будут созданы заранее, хватит игроку для завершения игры. Иными
+словами мы должны быть уверены в том, что трубы не закончатся раньше, чем игрок проиграет.
+
+Предсказать то, каким образом сложится игра для каждого конкретного игрока невозможно, поэтому выберем второй вариант: создавать трубы по мере их
+необходимости.
+
+Настоящие трубы производят на заводе, а мы будем создавать трубы с помощью функции*:
+```Python
+def create_pipe():
+    new_pipe = pipe_surface.get_rect(midtop = (600, 400))
+    return new_pipe
+```
+    * Данная функция возвращает (return) прямоугольный объект трубы, создаваемый на основе
+    поверхности (surface) изображения трубы.
+
+Для передвижения созданной трубы в методе **get_rect** определяется midtop (верхняя посередине *) точка с координатами 600
+пикселей по оси **х** и 400 по оси **у**. Такие координаты указаны для того, чтобы труба появлялась за пределами правой границы экрана.
+
+    * Так что перетаскивать трубы мы будем за хохолок (за верхушечку)
+ 
+С помощью функции, создающей трубы, мы будем наполнять список **pipe_list** в игровом цикле.
+
+> «Арр! Пусть всегда дым из твоей трубы валит, а лось никогда не покидает твой склад со слезой на глазах!»
+> <p align="right"> Ральф против интернета</p>
+
+Трубы, добавялемые в список, не отображаются на экране. Кроме того они не двигаются. Поэтому создадим две вспомогательные функции
+для устранения этого недоразумения. Первая функция будет перемещать трубы из списка, вторая - рисовать их.
+
+Функция для перемещения труб будет принимать текущий список труб в качестве параметра, обходить его в цикле и сдвигать каждую трубу
+справа налево, т.е. изменять значение координаты x в отрицательную сторону. После обхода списка, функция возвращает список труб, в котором
+у каждой трубы изменится координата х:
+
+```Python
+def move_pipes(pipes):
+    for pipe in pipes:
+        pipe.centerx -= 5;
+    return pipes
+```
+Функция для рисования труб на экране будет так же принимать список с трубами, которые необходимо нарисовать. В отличие от предыдущей функции,
+эта возвращать ничего не будет (ну разве что кроме none):
+
+```Python
+def draw_pipes(pipes):
+    for pipe in pipes:
+        screen.blit(pipe_surface, pipe)
+```
+#### Сколько вешать в граммах?
+Создав функции **create_pipe()**, **move_pipes()** и **draw_pipes()** можем открывать завод по их производству, т.е. внедрять в игру, но стоп. А 
+сколько требуется этих труб и с какой частотой они дожны появляться на экране?
+
+Здравый смысл подсказывает, что если мы будем рисовать по одной трубе
+каждый кадр мы будем получать 120 труб в секунду при текущем значении FPS, а это много. Очень много.
+
+К счастью в Pyagme существует механизм, позволяющий запускать код с определенным интервалом. Называется от User events (Ползовательские события).
+
+User event — это пользовательское (своё) событие, которое позволяет:
+- Посылать сигналы между частями кода через обычный цикл событий.
+- Делать таймеры (повторяющиеся действия).
+- Генерировать события при асинхронных действиях.
+
+Появление труб - это повторяющееся действие, потому что трубы появляются с определенной периодичностью.
+Создадим своё событие:
+```Python
+SPAWNPIPE = pygame.USEREVENT
+```
+укажим периодичность его плявления:
+```Python
+pygame.time.set_timer(SPAWNPIPE, 1200)
+```
+и будем запускать в цикле обработки событий раз во временной промежуток, указанный в set_timer:
+```Python
+if event.type == SPAWNPIPE:
+   pipe_list.append(create_pipe())
+```
+Теперь каждые 1200 милисекунд в списке будет повляться новая труба. для движения и отобажения труб в списке воспользуемся функциями 
+**move_pipes()** и **draw_pipes()**, которые ниже кода, рисующего птичку:
+
+```Python
+# Bird
+bird_movement += gravity
+bird_rect.centery += bird_movement
+screen.blit(bird_surface, bird_rect)
+
+# Pipes
+pipe_list = move_pipes(pipe_list)
+draw_pipes(pipe_list)
+```
+### Практика
+1. Дополните имеющийся код фрагментами нового кода, опираясь на полный код, написанный ниже.
+2. Расставьте блочные комментарии (# Birdб # Pipes и т.д.). поясняющие комментарии из кода ниже писать не нужно.
+3. Запустите код после завершения работы.
+TODO: Написать поясняющие комментарии.
+```Python
+import pygame, sys
 
 
+def draw_floor():
+    screen.blit(floor_surface, (floor_x_pos, 650))
+    screen.blit(floor_surface, (floor_x_pos + 450, 650))
+
+
+def create_pipe():
+    new_pipe = pipe_surface.get_rect(midtop = (600, 400))
+    return new_pipe
+
+
+def move_pipes(pipes):
+    for pipe in pipes:
+        pipe.centerx -= 5;
+    return pipes
+
+
+def draw_pipes(pipes):
+    for pipe in pipes:
+        screen.blit(pipe_surface, pipe)
+
+
+pygame.init()
+screen = pygame.display.set_mode((450, 800))
+clock = pygame.time.Clock()
+
+# Game variables
+gravity = 0.25
+bird_movement = 0
+
+bg_surface = pygame.image.load('sprites/background-day.png').convert()
+bg_surface = pygame.transform.scale(bg_surface, (450, 800))
+
+floor_surface = pygame.image.load('sprites/base.png').convert()
+floor_surface = pygame.transform.scale(floor_surface,(450, 150))
+floor_x_pos = 0
+
+bird_surface = pygame.image.load('sprites/bluebird-midflap.png').convert()
+bird_surface = pygame.transform.scale2x(bird_surface)
+bird_rect = bird_surface.get_rect(center=(100, 400))
+
+# Трубы
+pipe_surface = pygame.image.load('sprites/pipe-green.png')
+pipe_surface = pygame.transform.scale2x(pipe_surface)
+pipe_list = []
+SPAWNPIPE = pygame.USEREVENT
+pygame.time.set_timer(SPAWNPIPE, 1200)
+
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                bird_movement = 0
+                bird_movement -= 5
+        if event.type == SPAWNPIPE:
+            pipe_list.append(create_pipe())
+
+    screen.blit(bg_surface, (0, 0))
+
+    # Bird
+    bird_movement += gravity
+    bird_rect.centery += bird_movement
+    screen.blit(bird_surface, bird_rect)
+
+    # Pipes
+    pipe_list = move_pipes(pipe_list)
+    draw_pipes(pipe_list)
+
+    # Floor
+    draw_floor()
+    floor_x_pos -= 1
+
+    if floor_x_pos <= -450:
+        floor_x_pos = 0
+
+    pygame.display.update()
+    clock.tick(120)
+```
 #### Анимация крыльев
 

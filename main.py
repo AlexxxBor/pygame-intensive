@@ -59,7 +59,6 @@ while True:
                 bird_movement -= 5
         if event.type == SPAWNPIPE:
             pipe_list.append(create_pipe())
-            print(pipe_list)
 
     screen.blit(bg_surface, (0, 0))
 
