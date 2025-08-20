@@ -52,7 +52,7 @@ bg_surface = pygame.image.load('sprites/background-day.png').convert()
 bg_surface = pygame.transform.scale(bg_surface, (450, 800))
 
 floor_surface = pygame.image.load('sprites/base.png').convert()
-floor_surface = pygame.transform.scale(floor_surface,(450, 150))
+floor_surface = pygame.transform.scale(floor_surface, (450, 150))
 floor_x_pos = 0
 
 bird_surface = pygame.image.load('sprites/bluebird-midflap.png').convert()
@@ -73,9 +73,16 @@ while True:
             pygame.quit()
             sys.exit()
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
+            if event.key == pygame.K_SPACE and game_active:
                 bird_movement = 0
                 bird_movement -= 5
+
+            if event.key == pygame.K_SPACE and not game_active:
+                pipe_list.clear()
+                bird_rect.center = (100, 400)
+                bird_movement = 0
+                game_active = True
+
         if event.type == SPAWNPIPE:
             pipe_list.extend(create_pipe())
 

@@ -941,8 +941,22 @@ while True:
 
 ```
 #### Перезапуск игры после столкновения
-раотаем в цикле событий
+Работаем в цикле событий
+```Python
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE and game_active:   # Делаем, если пробел и игра активна
+                # ...
 
+            if event.key == pygame.K_SPACE and not game_active:   # Делаем, если пробел и игра завершена
+                pipe_list.clear()  # Очищаем список труб
+                bird_rect.center = (100, 400)  # Возвращаем птицу в стартовую точку
+                bird_movement = 0  # Сбрасываем движение
+                game_active = True  # Перезапускаем игру
+
+        if event.type == SPAWNPIPE:
+            # ...
+        # ...
+```
 
 #### Анимация крыльев
 
