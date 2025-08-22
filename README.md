@@ -957,6 +957,34 @@ while True:
             # ...
         # ...
 ```
+#### Вращенеи и анимация птицы
+При вращении в Pygame изображение теряет качество, но это не страшно, если сделать вращение один раз.
+2 поверхности: оригинальная и повёрнутая.
 
+Импортируем новую поверхность птицы
+Поворачиваем
+выводим её на экран
+
+```Python
+def rotate_bird(bird):
+    new_bird = pygame.transform.rotozoom(bird, -bird_movement * 3, 1)
+    return new_bird
+
+# ...
+
+#...
+bird_surface = pygame.image.load('sprites/bluebird-midflap.png').convert_alpha()  # Убираем черный квадрат под спрайтом
+#...
+
+# Bird
+        bird_movement += gravity
+        rotated_bird = rotate_bird(bird_surface)  # Создаём птицу с поворотом
+
+        bird_rect.centery += bird_movement
+        screen.blit(rotated_bird, bird_rect)  # Отображаем птицу с поворотом
+        game_active = check_collision(pipe_list)
+        #...
+
+```
 #### Анимация крыльев
 
