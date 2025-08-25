@@ -111,11 +111,7 @@ while True:
             pipe_list.extend(create_pipe())
 
         if event.type == BIRDFLAP:
-            if bird_index < 2:
-                bird_index += 1
-            else:
-                bird_index = 0
-
+            bird_index = (bird_index + 1) % len(bird_frames)
             bird_surface, bird_rect = bird_animation()
 
     screen.blit(bg_surface, (0, 0))
