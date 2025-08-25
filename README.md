@@ -987,4 +987,217 @@ bird_surface = pygame.image.load('sprites/bluebird-midflap.png').convert_alpha()
 
 ```
 #### Анимация крыльев
+**TODO: Написать текст с описанием способа анимации объектов в PyGame**
 
+Загружаем кадры анимации и конвертируем их в alpha, создаём список с кадрами и несколько дополнительных
+переменных:
+- **bird_index** - для обращения к кадрам в списке по индексу (при анимации этот индекс удет изменяться)
+- **ird_surface** - для отображения картинки кадра по индексу
+- **bird_rect** - прямоугольный объект для отслеживания столкновений (коллизий)
+
+Работаем с разделом кода, относящегося к птичке (старый код закомментирован):
+```Python
+#...
+# Bird
+bird_downflap = pygame.transform.scale2x(pygame.image.load('sprites/bluebird-downflap.png').convert_alpha())
+bird_midflap = pygame.transform.scale2x(pygame.image.load('sprites/bluebird-midflap.png').convert_alpha())
+bird_upflap = pygame.transform.scale2x(pygame.image.load('sprites/bluebird-upflap.png').convert_alpha())
+
+bird_frames = [bird_downflap, bird_midflap, bird_upflap]  # Список с "кадрами" анимации
+bird_index = 0  # Индекс кадра в списке
+bird_surface = bird_frames[bird_index]  # Картинка, выбираемая по индексу
+bird_rect = bird_surface.get_rect(center=(100, 400))  # Прямоугольный объект птицы
+
+# bird_surface = pygame.image.load('sprites/bluebird-midflap.png').convert_alpha()
+# bird_surface = pygame.transform.scale2x(bird_surface)
+# bird_rect = bird_surface.get_rect(center=(100, 400))
+#...
+```
+___
+#### Эксперимент
+Попробуйте поменять значения переменной **bird_index** на 1, 2, затем верните 0. \
+При каждой очередной замене значения запускайте код.
+
+Что происходит с изображением птицы? Почему?
+___
+Для изменения индекса кадра и анимирования изображения снова воспользуемся пользовательскими событиями. 
+
+Создадим событие, которое будет срабатывать раз в несколько милисекунд. При срабатывании того события индекс
+кадра птицы будет изменяться на единицу (1).
+
+```Python
+#...
+        if event.type == SPAWNPIPE:
+            pipe_list.extend(create_pipe())
+
+        if event.type == BIRDFLAP:  # Создаём событие для смены кадров
+            if bird_index < 2:  # Обновляем индекс кадра и сбрасываем по достижении длины списка с кадрами
+                bird_index += 1
+            else:
+                bird_index = 0
+
+            bird_surface, bird_rect = bird_animation()
+#...
+```
+Функция **bird_animation()** необходима для создания пары изображение-прямоуголник. Она применяется в игровом цикле
+и возвращает изображение текущего кадра анимации и его прямоугольный объект. Кадр анимации, затем, попадает в функцию
+**rotate_bird()** и поворачивается, а с помощью **bird_rect** отображается на холсте в нужном месте. Для создания обновленного 
+**bird_rect** используется информация о координате **y** предыдущего кадра - **bird_rect.centery**, а координата **x** остаётся неизменной, 
+т.к. птичка двигается только вверх-вниз.
+
+```Python
+def bird_animation():
+    new_bird = bird_frames[bird_index]
+    new_bird_rect = new_bird.get_rect(center = (100, bird_rect.centery))
+    return new_bird, new_bird_rect
+```
+
+Итоговый код с правками выглядит следующим образом:
+```Python
+
+import pygame, sys, random
+
+
+def draw_floor():
+    screen.blit(floor_surface, (floor_x_pos, 650))
+    screen.blit(floor_surface, (floor_x_pos + 450, 650))
+
+
+def create_pipe():
+    random_pipe_pos = random.choice(pipe_height)
+    bottom_pipe = pipe_surface.get_rect(midtop=(600, random_pipe_pos))
+    top_pipe = pipe_surface.get_rect(midbottom=(600, random_pipe_pos - 300))
+    return bottom_pipe, top_pipe
+
+
+def move_pipes(pipes):
+    for pipe in pipes:
+        pipe.centerx -= 5
+    return pipes
+
+
+def draw_pipes(pipes):
+    for pipe in pipes:
+        if pipe.bottom >= 800:
+            screen.blit(pipe_surface, pipe)
+        else:
+            flip_pipe = pygame.transform.flip(pipe_surface, flip_x=False, flip_y=True)
+            screen.blit(flip_pipe, pipe)
+
+
+def check_collision(pipes):
+    for pipe in pipes:
+        if bird_rect.colliderect(pipe):
+            return False
+
+    if bird_rect.top <= -100 or bird_rect.bottom >= 800:
+        return False
+
+    return True
+
+
+def rotate_bird(bird):
+    new_bird = pygame.transform.rotozoom(bird, -bird_movement * 3, 1)
+    return new_bird
+
+
+def bird_animation():
+    new_bird = bird_frames[bird_index]
+    new_bird_rect = new_bird.get_rect(center = (100, bird_rect.centery))
+    return new_bird, new_bird_rect
+
+
+pygame.init()
+screen = pygame.display.set_mode((450, 800))
+clock = pygame.time.Clock()
+
+# Game variables
+gravity = 0.25
+bird_movement = 0
+game_active = True  # !!!
+
+bg_surface = pygame.image.load('sprites/background-day.png').convert()
+bg_surface = pygame.transform.scale(bg_surface, (450, 800))
+
+floor_surface = pygame.image.load('sprites/base.png').convert()
+floor_surface = pygame.transform.scale(floor_surface, (450, 150))
+floor_x_pos = 0
+
+# Bird
+bird_downflap = pygame.transform.scale2x(pygame.image.load('sprites/bluebird-downflap.png').convert_alpha())
+bird_midflap = pygame.transform.scale2x(pygame.image.load('sprites/bluebird-midflap.png').convert_alpha())
+bird_upflap = pygame.transform.scale2x(pygame.image.load('sprites/bluebird-upflap.png').convert_alpha())
+
+bird_frames = [bird_downflap, bird_midflap, bird_upflap]  # Список с "кадрами" анимации
+bird_index = 0  # Индекс кадра в списке
+bird_surface = bird_frames[bird_index]
+bird_rect = bird_surface.get_rect(center=(100, 400))
+
+BIRDFLAP = pygame.USEREVENT + 1  # Каждое следующее событие создаётся с увеличением на +1
+pygame.time.set_timer(BIRDFLAP, 200)
+
+# bird_surface = pygame.image.load('sprites/bluebird-midflap.png').convert_alpha()
+# bird_surface = pygame.transform.scale2x(bird_surface)
+# bird_rect = bird_surface.get_rect(center=(100, 400))
+
+# Трубы
+pipe_surface = pygame.image.load('sprites/pipe-green.png')
+pipe_surface = pygame.transform.scale2x(pipe_surface)
+pipe_list = []
+SPAWNPIPE = pygame.USEREVENT
+pygame.time.set_timer(SPAWNPIPE, 1200)
+pipe_height = [300, 400, 500]
+
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE and game_active:
+                bird_movement = 0
+                bird_movement -= 5
+
+            if event.key == pygame.K_SPACE and not game_active:
+                pipe_list.clear()
+                bird_rect.center = (100, 400)
+                bird_movement = 0
+                game_active = True
+
+        if event.type == SPAWNPIPE:
+            pipe_list.extend(create_pipe())
+
+        if event.type == BIRDFLAP:  # Создаём событие для смены кадров
+            if bird_index < 2:  # Обновляем индекс кадра и сбрасываем по достижении длины списка с кадрами
+                bird_index += 1
+            else:
+                bird_index = 0
+
+            bird_surface, bird_rect = bird_animation()  # Обновляем кадры птицы
+
+    screen.blit(bg_surface, (0, 0))
+
+    if game_active:
+        # Bird
+        bird_movement += gravity
+        rotated_bird = rotate_bird(bird_surface)
+
+        bird_rect.centery += bird_movement
+        screen.blit(rotated_bird, bird_rect)  # Поворачиваем птицу
+        game_active = check_collision(pipe_list)
+
+        # Pipes
+        pipe_list = move_pipes(pipe_list)
+        draw_pipes(pipe_list)
+
+    # Floor
+    draw_floor()
+    floor_x_pos -= 1
+
+    if floor_x_pos <= -450:
+        floor_x_pos = 0
+
+    pygame.display.update()
+    clock.tick(120)
+
+```

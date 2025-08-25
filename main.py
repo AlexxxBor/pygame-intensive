@@ -44,6 +44,12 @@ def rotate_bird(bird):
     return new_bird
 
 
+def bird_animation():
+    new_bird = bird_frames[bird_index]
+    new_bird_rect = new_bird.get_rect(center = (100, bird_rect.centery))
+    return new_bird, new_bird_rect
+
+
 pygame.init()
 screen = pygame.display.set_mode((450, 800))
 clock = pygame.time.Clock()
@@ -60,9 +66,22 @@ floor_surface = pygame.image.load('sprites/base.png').convert()
 floor_surface = pygame.transform.scale(floor_surface, (450, 150))
 floor_x_pos = 0
 
-bird_surface = pygame.image.load('sprites/bluebird-midflap.png').convert_alpha()
-bird_surface = pygame.transform.scale2x(bird_surface)
+# Bird
+bird_downflap = pygame.transform.scale2x(pygame.image.load('sprites/bluebird-downflap.png').convert_alpha())
+bird_midflap = pygame.transform.scale2x(pygame.image.load('sprites/bluebird-midflap.png').convert_alpha())
+bird_upflap = pygame.transform.scale2x(pygame.image.load('sprites/bluebird-upflap.png').convert_alpha())
+
+bird_frames = [bird_downflap, bird_midflap, bird_upflap]  # Список с "кадрами" анимации
+bird_index = 0  # Индекс кадра в списке
+bird_surface = bird_frames[bird_index]
 bird_rect = bird_surface.get_rect(center=(100, 400))
+
+BIRDFLAP = pygame.USEREVENT + 1  # Каждое следующее событие создаётся с увеличением на +1
+pygame.time.set_timer(BIRDFLAP, 200)
+
+# bird_surface = pygame.image.load('sprites/bluebird-midflap.png').convert_alpha()
+# bird_surface = pygame.transform.scale2x(bird_surface)
+# bird_rect = bird_surface.get_rect(center=(100, 400))
 
 # Трубы
 pipe_surface = pygame.image.load('sprites/pipe-green.png')
@@ -90,6 +109,14 @@ while True:
 
         if event.type == SPAWNPIPE:
             pipe_list.extend(create_pipe())
+
+        if event.type == BIRDFLAP:
+            if bird_index < 2:
+                bird_index += 1
+            else:
+                bird_index = 0
+
+            bird_surface, bird_rect = bird_animation()
 
     screen.blit(bg_surface, (0, 0))
 
