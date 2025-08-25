@@ -50,14 +50,24 @@ def bird_animation():
     return new_bird, new_bird_rect
 
 
+def score_display():  # Создаём функцию для отображения очков
+    score_surface = game_font.render(str(int(score)), True, (255, 255, 255))  # Надпись, сглаживание и цвет
+    score_rect = score_surface.get_rect(center=(225, 100))
+    screen.blit(score_surface, score_rect)
+
+
 pygame.init()
 screen = pygame.display.set_mode((450, 800))
 clock = pygame.time.Clock()
+game_font = pygame.font.Font('04B_19.ttf', 40)  # Стиль и размер шрифта
+
 
 # Game variables
 gravity = 0.25
 bird_movement = 0
-game_active = True  # !!!
+game_active = True  # Флаг работы игры
+score = 0  # Текущее кол-во очков
+high_score = 0  # Лучший результат
 
 bg_surface = pygame.image.load('sprites/background-day.png').convert()
 bg_surface = pygame.transform.scale(bg_surface, (450, 800))
@@ -128,6 +138,11 @@ while True:
         # Pipes
         pipe_list = move_pipes(pipe_list)
         draw_pipes(pipe_list)
+
+        # Scores
+        score += 0.01
+        score_display()
+
 
     # Floor
     draw_floor()
